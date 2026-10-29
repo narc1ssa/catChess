@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Шахматы с котиками</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <h1>Шахматы с котиками</h1>
+    <p id="status" class="status">Ваш ход (белые)</p>
+    <div id="board-wrap">
+      <svg id="board" viewBox="0 0 1254 1254" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"></svg>
+    </div>
+    <div class="controls">
+      <button id="new-game" type="button">Новая игра</button>
+      <label>Глубина ИИ
+        <select id="depth">
+          <option value="2">лёгкий</option>
+          <option value="3">средний</option>
+          <option value="4" selected>сложный</option>
+        </select>
+      </label>
+    </div>
+    <p class="hint">Вы играете белыми. Нажмите на фигуру, затем на клетку назначения. Пешка превращается в ферзя.</p>
+  </main>
+  <script src="chess.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
