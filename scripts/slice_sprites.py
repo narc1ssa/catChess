@@ -1,7 +1,7 @@
 """Нарезает спрайт-листы white.png / black.png на отдельные фигуры с прозрачным фоном.
 Запуск: python3 scripts/slice_sprites.py  (нужен Pillow)
 Лист: 8 колонок x 2 ряда. Верхний ряд: ладья, конь, слон, ферзь, король, слон, конь, ладья.
-Нижний ряд: 8 пешек. В каждой ячейке оставляется главная связная область (без обрывков соседей)."""
+Нижний ряд: 8 пешек. Фон листов чёрный; в каждой ячейке оставляется главная связная область."""
 from PIL import Image
 from collections import deque
 import os
@@ -12,8 +12,9 @@ ORDER = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'
 os.makedirs(OUT, exist_ok=True)
 
 def is_bg(p):
-    r, g, b = p[0], p[1], p[2]
-    return min(r, g, b) > 228 and max(r, g, b) - min(r, g, b) < 22
+    # Файлы white.png и black.png имеют чёрный фон; оставляем мягкие края
+    # рисунка, исключая только почти чёрные пиксели.
+    return max(p[0], p[1], p[2]) < 24
 
 def largest_component(cell):
     w, h = cell.size
@@ -57,8 +58,11 @@ side_w = max(b[2] - b[0] for b in bboxes.values())
 side_h = max(b[3] - b[1] for b in bboxes.values())
 for (color, name), img in pieces.items():
     c = img.crop(bboxes[(color, name)])
-    canvas = Image.new('RGBA', (side_w + 8, side_h + 8), (0, 0, 0, 0))
-    canvas.paste(c, ((side_w + 8 - c.width) // 2, side_h + 8 - c.height - 4), c)
+    canvas_h = side_h + 8
+    # Сохраняем соотношение сторон, ожидаемое интерфейсом (100:157).
+    canvas_w = max(side_w + 8, round(canvas_h * 100 / 157))
+    canvas = Image.new('RGBA', (canvas_w, canvas_h), (0, 0, 0, 0))
+    canvas.paste(c, ((canvas_w - c.width) // 2, canvas_h - c.height - 4), c)
     canvas = canvas.resize((int(canvas.width * 0.5), int(canvas.height * 0.5)), Image.LANCZOS)
     canvas.save(os.path.join(OUT, f'{color}-{name}.png'))
 print('ok', side_w, side_h)
