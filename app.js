@@ -71,7 +71,18 @@
 
   function setStatus(text) { statusEl.textContent = text; }
 
+  // Пары «откуда -> куда» для анимации: ход фигуры и (при рокировке) ладьи
+  function animFor(m) {
+    const moves = [{ from: m.from, to: m.to }];
+    if (m.castle) {
+      const rook = { 6: [7, 5], 2: [0, 3], 62: [63, 61], 58: [56, 59] }[m.to];
+      if (rook) moves.push({ from: rook[0], to: rook[1] });
+    }
+    return { moves };
+  }
+
   function applyMove(m) {
+    const anim = animFor(m);
     game.s = Chess.makeMove(game.s, m);
     game.history.push(Chess.key(game.s));
     game.last = { from: m.from, to: m.to };
@@ -80,7 +91,7 @@
     const st = Chess.status(game.s, game.history);
     game.status = st;
     if (st.state !== 'playing') game.over = true;
-    render();
+    render(anim);
     if (!game.over && game.s.turn === 'b') {
       thinking = true;
       setStatus('Компьютер думает…');
@@ -115,7 +126,7 @@
     render();
   }
 
-  function render() {
+  function render(anim) {
     const s = game.s;
     const st = game.status || Chess.status(s, game.history);
     game.status = st;
@@ -143,7 +154,9 @@
         parts.push(`<circle class="dot" cx="${g.cx}" cy="${g.cy}" r="${g.sqH * 0.14}"/>`);
       }
     }
-    // фигуры
+    // фигуры (с data-sq для анимации)
+    const movedTo = new Map();
+    if (anim) for (const mv of anim.moves) movedTo.set(mv.to, mv.from);
     for (let sq = 0; sq < 64; sq++) {
       const p = s.board[sq];
       if (!p) continue;
@@ -153,7 +166,13 @@
       const bottom = g.cy + g.sqH * 0.45;
       const x = g.cx - pw / 2, y = bottom - ph;
       const href = `assets/pieces/${p.c}-${NAMES[p.t]}.png`;
-      parts.push(`<image class="piece" href="${href}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}"/>`);
+      let style = '';
+      if (movedTo.has(sq)) {
+        // стартовое смещение: фигура визуально стоит на старой клетке
+        const fg = geoms[movedTo.get(sq)];
+        style = ` style="transform:translate(${(fg.cx - g.cx).toFixed(1)}px,${(fg.cy - g.cy).toFixed(1)}px)"`;
+      }
+      parts.push(`<image class="piece" data-sq="${sq}"${style} href="${href}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}"/>`);
     }
     // клики по клеткам — сверху
     for (let sq = 0; sq < 64; sq++) {
@@ -164,6 +183,15 @@
     svg.querySelectorAll('polygon.sq').forEach(el => {
       el.addEventListener('click', () => onSquareClick(parseInt(el.dataset.sq, 10)));
     });
+    // запуск плавного перемещения: сбрасываем смещение в ноль с CSS-переходом
+    if (anim) {
+      const els = [...svg.querySelectorAll('image.piece[style]')];
+      els.forEach(el => void el.getBoundingClientRect());
+      for (const el of els) {
+        el.style.transition = 'transform 0.4s ease-in-out';
+        el.style.transform = 'translate(0px,0px)';
+      }
+    }
 
     // статус
     if (st.state === 'mate') {
